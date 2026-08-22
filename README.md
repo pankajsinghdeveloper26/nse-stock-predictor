@@ -1,163 +1,117 @@
-# NSE Stock Prediction — Phase 1
+# NSE Stock Prediction Engine
 
-Data ingestion & feature engineering foundation for an NSE (National Stock
-Exchange, India) stock prediction project.
+A modular Python framework for end-to-end stock prediction on the National Stock Exchange (NSE) of India. Features automated data ingestion, custom technical indicator calculation, candlestick pattern detection, and a multi-model ML forecasting pipeline with walking backtests and interactive CLI reporting.
 
-## Project structure
+---
 
-```
+## Features
+
+- **Automated Data Pipeline**: Direct integration with `yfinance` to fetch high-frequency OHLCV data for standard NSE tickers (`.NS`).
+- **Feature Engineering**: Built-in, high-performance implementations of popular technical indicators (RSI, MACD, Bollinger Bands, ATR, SMAs).
+- **Candlestick Pattern Recognition**: Automated detection of Doji, Hammer, Inverted Hammer, and Engulfing patterns.
+- **Multi-Model Forecasting Engine**: Dynamic evaluation engine comparing Tree Ensembles (XGBoost / RandomForest), LSTMs (TensorFlow / MLP), and Baseline models.
+- **Realistic Walk-Forward Backtesting**: One-step-ahead walk-forward validation scored by RMSE and MAPE.
+- **Uncertainty Band Modeling**: ATR-scaled band projections for High/Low values scaled by a sqrt(t) factor.
+- **CLI & Visual Reporting**: Color-coded summary dashboards, backtest leaderboards, and market mood heuristics.
+- **Offline Reliability**: Full synthetic testing suite allowing pipeline execution without an active internet connection.
+
+---
+
+## Project Structure
+
+```text
 nse_stock_prediction/
-├── requirements.txt
-├── README.md
-├── src/
-│   └── data_loader.py        # fetch + indicators + candlestick patterns
-├── tests/
-│   └── test_data_loader_offline.py   # synthetic-data validation, no network needed
+├── config/                  # Ticker configurations & model hyperparameter files
 ├── data/
-│   ├── raw/                  # raw yfinance OHLCV pulls land here
-│   └── processed/            # feature-engineered datasets land here
-├── notebooks/                # for EDA / prototyping
-├── models/                   # trained model artifacts (Phase 2+)
-├── config/                   # config files (tickers, hyperparams, etc.)
-└── logs/
-```
+│   ├── raw/                 # Ingested raw OHLCV datasets
+│   └── processed/           # Feature-engineered datasets
+├── logs/                    # Application and runtime execution logs
+├── models/                  # Saved binary model artifacts
+├── notebooks/               # Prototyping, statistical analysis, and EDA
+├── src/
+│   ├── cli.py               # Command-Line Interface execution tool
+│   ├── data_loader.py       # Fetching, indicator math, and pattern engineering
+│   └── models.py            # Forecasting engines, backtesting, and mood heuristics
+├── tests/
+│   └── test_data_loader_offline.py  # Synthetic-data offline validation suite
+├── README.md
+└── requirements.txt
 
-## Setup
-
-```bash
+Installation & Setup
+Prerequisites
+ * Python 3.9+
+ * Virtual environment tool (venv or conda)
+Quick Setup
+ * Clone the repository:
+   git clone [https://github.com/your-username/nse_stock_prediction.git](https://github.com/your-username/nse_stock_prediction.git)
 cd nse_stock_prediction
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+
+ * Set up a virtual environment:
+   python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+ * Install dependencies:
+   pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-## Quick start
+Data & Feature Pipeline
+Supported Indicators
+| Indicator | Column Name | Configuration Defaults | Description |
+|---|---|---|---|
+| Simple Moving Average | SMA_20, SMA_50 | 20, 50 periods | Trend direction indicators |
+| Relative Strength Index | RSI_14 | 14 periods (Wilder's Smoothing) | Momentum oscillator |
+| MACD | MACD, MACD_Signal, MACD_Hist | 12, 26, 9 EMA periods | Moving Average Convergence Divergence |
+| Bollinger Bands | BB_Upper, BB_Middle, BB_Lower, BB_Width, BB_PercentB | 20 periods, 2 std dev | Volatility bands |
+| Average True Range | ATR_14 | 14 periods | Absolute volatility metric |
+Candlestick Patterns
+| Pattern | Column Name | Condition Summary |
+|---|---|---|
+| Doji | Doji | Body height <= 5% of total candle range |
+| Hammer | Hammer | Small upper body, long lower shadow, minimal upper wick |
+| Inverted Hammer | InvertedHammer | Small lower body, long upper shadow, minimal lower wick |
+| Bullish Engulfing | Bullish_Engulfing | Bullish candle body fully overlaps prior bearish body |
+| Bearish Engulfing | Bearish_Engulfing | Bearish candle body fully overlaps prior bullish body |
+Usage Guide
+1. Python API
+from src.data_loader import build_feature_dataset, fetch_stock_data, add_technical_indicators
 
-```python
-from src.data_loader import fetch_stock_data, add_technical_indicators, detect_candlestick_patterns
+# Option A: Run the end-to-end automated pipeline
+df_tcs = build_feature_dataset("TCS.NS", period="2y", interval="1d")
 
+# Option B: Step-by-step modular pipeline
 df = fetch_stock_data("RELIANCE.NS", period="2y", interval="1d")
-df = add_technical_indicators(df)     # SMA20/50, RSI, MACD, Bollinger Bands, ATR
-df = detect_candlestick_patterns(df)  # Doji, Hammer, InvertedHammer, Engulfing
-```
+df = add_technical_indicators(df)
 
-Or run the full pipeline end-to-end (fetch → indicators → patterns → save CSV):
-
-```python
-from src.data_loader import build_feature_dataset
-
-df = build_feature_dataset("TCS.NS", period="2y", interval="1d")
-```
-
-## Validating without network access
-
-`src/data_loader.py` needs internet access (via `yfinance`) to pull real
-NSE data. To sanity-check the indicator math and pattern-detection logic
-without any network call, run:
-
-```bash
-python tests/test_data_loader_offline.py
-```
-
-This generates synthetic OHLCV data, injects hand-crafted candles with known
-patterns, and asserts the indicators/patterns are computed correctly.
-
-## Indicators implemented
-
-| Indicator | Column(s) | Notes |
-|---|---|---|
-| SMA | `SMA_20`, `SMA_50` | Simple moving average |
-| RSI | `RSI_14` | Wilder's smoothing, 14-period default |
-| MACD | `MACD`, `MACD_Signal`, `MACD_Hist` | 12/26/9 default (EMA-based) |
-| Bollinger Bands | `BB_Middle/Upper/Lower/Width/PercentB` | 20-period, 2 std dev default |
-| ATR | `ATR_14` | Wilder's smoothing, 14-period default |
-
-## Candlestick patterns implemented
-
-| Pattern | Column | Logic summary |
-|---|---|---|
-| Doji | `Doji` | Body ≤ 5% of full candle range |
-| Hammer | `Hammer` | Small body, long lower wick, short upper wick |
-| Inverted Hammer | `InvertedHammer` | Small body, long upper wick, short lower wick |
-| Bullish Engulfing | `Bullish_Engulfing` | Green candle body fully engulfs prior red candle body |
-| Bearish Engulfing | `Bearish_Engulfing` | Red candle body fully engulfs prior green candle body |
-
-## A note on the requested setup commands
-
-Three commands from the original task list weren't run here since this
-sandbox has no network access and isn't a Claude Code / CLI context:
-
-- `npx skills add lombiq/tailwind-agent-skills --skill tailwind-4-docs`
-- `npx getdesign add vercel --force`
-- `claude mcp add astro https://mcp.docs.astro.build/mcp`
-
-Run these yourself in your local terminal when you're ready to wire up the
-frontend/MCP tooling — they're unrelated to the Python data pipeline above
-and don't block Phase 1.
-
-## Phase 2 — ML Forecasting Engine & CLI
-
-`src/models.py` trains and compares three forecasting models per ticker:
-
-| Model | Backend | Fallback (if backend not installed) |
-|---|---|---|
-| Tree Ensemble | XGBoost | `sklearn.RandomForestRegressor` |
-| LSTM | TensorFlow/Keras `LSTM(32)→Dense(16)→Dense(1)` | `sklearn.MLPRegressor` on flattened windows |
-| Baseline | — | Drift-based moving-average extrapolation (no ML) |
-
-**This environment has neither XGBoost nor TensorFlow installed**, so both
-fallbacks are active — this is stated explicitly in the leaderboard's Model
-column (e.g. `"LSTM (MLP fallback — TensorFlow not installed)"`) so it's
-never ambiguous which backend actually ran. Install `xgboost` and
-`tensorflow` from `requirements.txt` in an environment with the wheels
-available to get the full-strength versions; no code changes needed.
-
-### Pipeline
-
-1. Each model is backtested with one-step-ahead walk-forward evaluation on
-   a held-out tail (`--test-size`, default 30 trading days), scored by
-   **RMSE** and **MAPE** on the reconstructed Close price.
-2. Models are ranked by RMSE; the best one is refit on the full series and
-   used to forecast the next `--horizon` (default 5) trading days.
-3. Predicted **Close** comes from the model's forecast; **High/Low** are
-   derived as an ATR-scaled band around Close that widens with
-   `sqrt(day)` — the standard random-walk uncertainty scaling.
-4. **Market Mood** (Bullish/Bearish/Sideways) comes from the forecast's
-   5-day % change vs configurable thresholds (±1.5% by default).
-5. **Buy/Hold/Sell signal** combines Market Mood with current RSI and MACD
-   histogram via simple rules (see `derive_signal()` in `models.py`).
-
-> **Not financial advice.** The mood/signal logic is a simple, transparent
-> heuristic for educational and demo purposes — it is not investment advice
-> and shouldn't be the basis for real trading decisions.
-
-### CLI (`src/cli.py`)
-
-```bash
+2. Command Line Interface (CLI)
+The engine provides a built-in interactive CLI interface via src/cli.py.
 cd src
 
-# Live NSE ticker (needs internet + yfinance)
+# Run live forecast for an NSE ticker (Requires Internet)
 python cli.py forecast --ticker RELIANCE.NS --period 2y
 
-# From a local CSV (e.g. one saved by fetch_stock_data in Phase 1)
+# Run forecast using a local CSV input file
 python cli.py forecast --csv ../data/raw/RELIANCE_NS_1d.csv
 
-# Fully offline demo — synthetic data, no network required.
-# This is what was used to verify the CLI runs end-to-end in this sandbox.
+# Run an end-to-end demo mode (Synthetic data, offline ready)
 python cli.py forecast --demo
 
-# Custom horizon / backtest window, and save the forecast
+# Customize parameters and output destination
 python cli.py forecast --ticker TCS.NS --horizon 7 --test-size 45 --save ../data/processed/tcs_forecast.csv
-```
 
-Output includes: a model leaderboard table, a 5-day Close/High/Low forecast
-table, and a Market Mood + Buy/Hold/Sell panel with rationale — all rendered
-with `tabulate` (+ `colorama` coloring when available).
+ML Forecasting Engine Details
+The model execution suite continuously backtests three distinct algorithm choices per target ticker:
+ * Tree Ensemble Engine: Native XGBoost Regressor (falls back to RandomForestRegressor if XGBoost is absent).
+ * Sequential Neural Engine: TensorFlow/Keras LSTM(32) -> Dense(16) -> Dense(1) (falls back to MLPRegressor on windowed arrays).
+ * Baseline Extrapolation Engine: Drift-based moving average baseline for baseline performance verification.
+Signal Generation Heuristics
+ * Forecast High/Low Limits: Calculated by applying ATR volatility buffers expanding dynamically over horizon t by \sqrt{t}.
+ * Market Mood: Derived from the projected 5-day return trajectory (>= +1.5% Bullish, <= -1.5% Bearish, otherwise Sideways).
+ * Trading Signal: Rule-based synthesis combining market mood, overbought/oversold RSI readings, and MACD histogram trends.
+Offline Testing & Validation
+To test technical indicators, pattern recognition rules, and model scripts without making external network calls, run the offline verification test suite:
+python tests/test_data_loader_offline.py
 
-Verified in this sandbox with `python cli.py forecast --demo`, including
-`--csv` input and `--save` output, and a clean (non-traceback) error message
-when `--ticker` is used without `yfinance`/network available.
-
-## Status
-
-**Phase 1: complete. Phase 2: complete.** Awaiting confirmation before Phase 3.
+This generates synthetic multi-day price series, injects pre-determined candlestick patterns, and verifies feature output metrics deterministically.
+Disclaimer
+> Disclaimer: This codebase and generated trading signals are intended strictly for educational, analytical, and demonstration purposes. Market models and mood heuristics provided do not constitute financial advice. Real trading involves significant risk of capital loss.
+>
