@@ -1,0 +1,162 @@
+---
+---
+<aside class="flex flex-col gap-4">
+  <!-- Market mood + signal -->
+  <div class="panel p-4">
+    <p class="label-eyebrow mb-2">Market Mood</p>
+    <div id="mood-badge" class="mb-4 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-sm font-semibold">
+      <span id="mood-dot" class="h-2 w-2 rounded-full"></span>
+      <span id="mood-text">—</span>
+    </div>
+
+    <p class="label-eyebrow mb-2">Signal</p>
+    <div id="signal-badge" class="mb-3 inline-flex items-center rounded-md border px-3 py-1.5 font-mono text-sm font-semibold">
+      <span id="signal-text">—</span>
+    </div>
+    <p id="signal-rationale" class="text-xs leading-relaxed text-ink-muted">
+      Load a ticker to see the model's read on it.
+    </p>
+  </div>
+
+  <!-- Model leaderboard -->
+  <div class="panel p-4">
+    <div class="mb-3 flex items-center justify-between">
+      <p class="label-eyebrow">Model Leaderboard</p>
+      <span id="leaderboard-best" class="font-mono text-[11px] text-signal"></span>
+    </div>
+    <ol id="leaderboard-list" class="flex flex-col gap-2">
+      <li class="text-sm text-ink-muted">—</li>
+    </ol>
+  </div>
+
+  <!-- Market pulse (basket-wide) -->
+  <div class="panel p-4">
+    <p class="label-eyebrow mb-2">Market Pulse — NSE Top 10</p>
+    <div id="pulse-bar" class="mb-2 flex h-2 overflow-hidden rounded-full bg-hair">
+      <div id="pulse-bull" class="bg-bull" style="width: 0%"></div>
+      <div id="pulse-side" class="bg-hold" style="width: 0%"></div>
+      <div id="pulse-bear" class="bg-bear" style="width: 0%"></div>
+    </div>
+    <div class="flex justify-between font-mono text-[11px] text-ink-muted">
+      <span><span class="text-bull">●</span> Bullish <span id="pulse-bull-pct">—</span></span>
+      <span><span class="text-hold">●</span> Flat <span id="pulse-side-pct">—</span></span>
+      <span><span class="text-bear">●</span> Bearish <span id="pulse-bear-pct">—</span></span>
+    </div>
+  </div>
+</aside>
+
+<script>
+  import { getMarketMood, type ForecastPayload, type LeaderboardRow } from "../lib/api";
+
+  const moodBadge = document.getElementById("mood-badge")!;
+  const moodDot = document.getElementById("mood-dot")!;
+  const moodText = document.getElementById("mood-text")!;
+  const signalBadge = document.getElementById("signal-badge")!;
+  const signalText = document.getElementById("signal-text")!;
+  const signalRationale = document.getElementById("signal-rationale")!;
+  const leaderboardList = document.getElementById("leaderboard-list")!;
+  const leaderboardBest = document.getElementById("leaderboard-best")!;
+
+  const MOOD_STYLES: Record<string, { badge: string; dot: string }> = {
+    Bullish: { badge: "border-bull/40 bg-bull/10 text-bull", dot: "bg-bull" },
+    Bearish: { badge: "border-bear/40 bg-bear/10 text-bear", dot: "bg-bear" },
+    Sideways: { badge: "border-hold/40 bg-hold/10 text-hold", dot: "bg-hold" },
+  };
+
+  const SIGNAL_STYLES: Record<string, string> = {
+    BUY: "border-bull/40 bg-bull/10 text-bull",
+    SELL: "border-bear/40 bg-bear/10 text-bear",
+    HOLD: "border-hold/40 bg-hold/10 text-hold",
+  };
+
+  function findNumericFields(row: LeaderboardRow): [string, number][] {
+    return Object.entries(row).filter(
+      (entry): entry is [string, number] => typeof entry[1] === "number"
+    );
+  }
+
+  function findLabelField(row: LeaderboardRow): string {
+    const stringEntry = Object.entries(row).find(([, v]) => typeof v === "string");
+    return stringEntry ? String(stringEntry[1]) : "Model";
+  }
+
+  function renderLeaderboard(leaderboard: LeaderboardRow[], best: string) {
+    leaderboardBest.textContent = best ? `★ ${best}` : "";
+    if (!leaderboard.length) {
+      leaderboardList.innerHTML = '<li class="text-sm text-ink-muted">No leaderboard data.</li>';
+      return;
+    }
+    leaderboardList.innerHTML = leaderboard
+      .map((row, i) => {
+        const name = findLabelField(row);
+        const isBest = name === best;
+        const metrics = findNumericFields(row)
+          .slice(0, 3)
+          .map(([k, v]) => `<span class="text-ink-muted">${k}</span> <span class="tabular text-ink">${v.toFixed(4)}</span>`)
+          .join('<span class="mx-1.5 text-hair">·</span>');
+        return `
+          <li class="flex items-center justify-between rounded-md border px-3 py-2 ${
+            isBest ? "border-signal/40 bg-signal/10" : "border-hair bg-panel-raised"
+          }">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs text-ink-muted">#${i + 1}</span>
+              <span class="font-mono text-sm ${isBest ? "text-signal" : "text-ink"}">${name}</span>
+            </div>
+            <div class="font-mono text-[11px]">${metrics}</div>
+          </li>
+        `;
+      })
+      .join("");
+  }
+
+  function renderMoodAndSignal(forecast: ForecastPayload | null) {
+    if (!forecast) {
+      moodBadge.className = "mb-4 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-sm font-semibold border-hair text-ink-muted";
+      moodText.textContent = "No data";
+      moodDot.className = "h-2 w-2 rounded-full bg-ink-muted";
+      signalBadge.className = "mb-3 inline-flex items-center rounded-md border px-3 py-1.5 font-mono text-sm font-semibold border-hair text-ink-muted";
+      signalText.textContent = "—";
+      signalRationale.textContent = "This ticker doesn't have enough history for a forecast yet.";
+      leaderboardList.innerHTML = '<li class="text-sm text-ink-muted">—</li>';
+      leaderboardBest.textContent = "";
+      return;
+    }
+
+    const moodStyle = MOOD_STYLES[forecast.market_mood] ?? MOOD_STYLES.Sideways;
+    moodBadge.className = `mb-4 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-sm font-semibold ${moodStyle.badge}`;
+    moodText.textContent = forecast.market_mood;
+    moodDot.className = `h-2 w-2 rounded-full ${moodStyle.dot}`;
+
+    const sigStyle = SIGNAL_STYLES[forecast.signal] ?? SIGNAL_STYLES.HOLD;
+    signalBadge.className = `mb-3 inline-flex items-center rounded-md border px-3 py-1.5 font-mono text-sm font-semibold ${sigStyle}`;
+    signalText.textContent = forecast.signal;
+    signalRationale.textContent = forecast.rationale || forecast.disclaimer;
+
+    renderLeaderboard(forecast.leaderboard, forecast.best_model);
+  }
+
+  window.addEventListener("nse:forecast-loaded", (e: Event) => {
+    const { forecast } = (e as CustomEvent<{ ticker: string; forecast: ForecastPayload | null }>).detail;
+    renderMoodAndSignal(forecast);
+  });
+
+  async function renderPulse() {
+    try {
+      const data = await getMarketMood();
+      const bullEl = document.getElementById("pulse-bull")!;
+      const sideEl = document.getElementById("pulse-side")!;
+      const bearEl = document.getElementById("pulse-bear")!;
+      bullEl.style.width = `${data.bullish_pct}%`;
+      sideEl.style.width = `${data.sideways_pct}%`;
+      bearEl.style.width = `${data.bearish_pct}%`;
+      document.getElementById("pulse-bull-pct")!.textContent = `${data.bullish_pct.toFixed(0)}%`;
+      document.getElementById("pulse-side-pct")!.textContent = `${data.sideways_pct.toFixed(0)}%`;
+      document.getElementById("pulse-bear-pct")!.textContent = `${data.bearish_pct.toFixed(0)}%`;
+    } catch {
+      /* leave the placeholder dashes in place */
+    }
+  }
+
+  renderPulse();
+  setInterval(renderPulse, 5 * 60 * 1000);
+</script>

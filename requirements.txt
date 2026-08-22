@@ -1,0 +1,25 @@
+# --------------------------------------------------------------------------- #
+# NSE Stock Prediction Project — requirements.txt
+# --------------------------------------------------------------------------- #
+# Core data / modeling stack (Phase 1 & 2)
+# --------------------------------------------------------------------------- #
+pandas>=2.0.0
+numpy>=1.24.0
+yfinance>=0.2.40
+scikit-learn>=1.3.0
+
+# --------------------------------------------------------------------------- #
+# Phase 3 — FastAPI backend
+# --------------------------------------------------------------------------- #
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+
+# --------------------------------------------------------------------------- #
+# Optional — models.py degrades gracefully if these aren't installed:
+#   - no xgboost   -> Tree Ensemble falls back to sklearn RandomForestRegressor
+#   - no tensorflow -> LSTM falls back to sklearn MLPRegressor on windowed features
+# Uncomment to enable the stronger backends.
+# --------------------------------------------------------------------------- #
+# xgboost>=2.0.0
+# tensorflow>=2.15.0

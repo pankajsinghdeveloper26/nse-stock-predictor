@@ -1,0 +1,93 @@
+---
+---
+<footer class="mx-auto mt-6 max-w-[1400px] px-4 pb-8 pt-4 sm:px-6">
+  <div class="flex flex-col items-center justify-between gap-3 border-t border-hair pt-4 text-xs text-ink-muted sm:flex-row">
+    <p>
+      NSE Pulse is an educational demo. Forecasts and signals are
+      <span class="text-ink-muted">not financial advice.</span>
+    </p>
+    <div class="flex items-center gap-4">
+      <button id="about-open" type="button" class="font-mono text-ink-muted underline decoration-hair underline-offset-4 hover:text-signal">
+        About &amp; credits
+      </button>
+      <span class="font-mono">© {new Date().getFullYear()}</span>
+    </div>
+  </div>
+</footer>
+
+<div id="about-overlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+  <div
+    id="about-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="about-title"
+    class="panel-raised w-full max-w-md p-6"
+  >
+    <div class="mb-4 flex items-start justify-between">
+      <h2 id="about-title" class="font-mono text-lg font-semibold text-ink">About NSE Pulse</h2>
+      <button id="about-close" type="button" aria-label="Close" class="text-ink-muted hover:text-ink">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M18 6 6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <p class="mb-4 text-sm leading-relaxed text-ink-muted">
+      A dashboard for NSE equities combining historical OHLCV data, technical indicators,
+      and a multi-model 5-day forecast (Tree Ensemble / LSTM / Baseline) with a derived
+      market mood and Buy/Hold/Sell signal. Built for learning — not investment advice.
+    </p>
+
+    <dl class="space-y-2 border-t border-hair pt-4 text-sm">
+      <div class="flex justify-between gap-4">
+        <dt class="text-ink-muted">Developer</dt>
+        <dd class="text-ink">Pankaj Singh</dd>
+      </div>
+      <div class="flex justify-between gap-4">
+        <dt class="text-ink-muted">Mail</dt>
+        <dd><a class="text-signal hover:underline" href="mailto:pankajsinghdeveloper26@gmail.com">pankajsinghdeveloper26@gmail.com</a></dd>
+      </div>
+      <div class="flex justify-between gap-4">
+        <dt class="text-ink-muted">LinkedIn</dt>
+        <dd>
+          <a class="text-signal hover:underline" href="https://www.linkedin.com/in/pankaj-singh-053a2a364" target="_blank" rel="noopener noreferrer">
+            pankaj-singh-053a2a364
+          </a>
+        </dd>
+      </div>
+    </dl>
+  </div>
+</div>
+
+<script>
+  const overlay = document.getElementById("about-overlay")!;
+  const dialog = document.getElementById("about-dialog")!;
+  const openBtn = document.getElementById("about-open")!;
+  const closeBtn = document.getElementById("about-close")!;
+  let lastFocused: HTMLElement | null = null;
+
+  function open() {
+    lastFocused = document.activeElement as HTMLElement | null;
+    overlay.classList.remove("hidden");
+    overlay.classList.add("flex");
+    closeBtn.focus();
+    document.addEventListener("keydown", onKeydown);
+  }
+
+  function close() {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("flex");
+    document.removeEventListener("keydown", onKeydown);
+    lastFocused?.focus();
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") close();
+  }
+
+  openBtn.addEventListener("click", open);
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (!dialog.contains(e.target as Node)) close();
+  });
+</script>

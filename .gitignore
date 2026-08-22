@@ -1,0 +1,16 @@
+# Astro / Node
+node_modules/
+dist/
+.astro/
+.env
+.env.production
+npm-debug.log*
+
+# Python (backend, if colocated)
+.venv/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

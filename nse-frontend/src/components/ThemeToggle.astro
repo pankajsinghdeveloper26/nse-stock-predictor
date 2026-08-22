@@ -1,0 +1,39 @@
+---
+---
+<button
+  id="theme-toggle"
+  type="button"
+  aria-label="Toggle dark and light mode"
+  class="relative grid h-9 w-9 place-items-center rounded-md border border-hair text-ink-muted transition-colors hover:text-ink hover:border-signal/50 focus-visible:outline-2 focus-visible:outline-signal"
+>
+  <svg id="icon-sun" class="hidden h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+  </svg>
+  <svg id="icon-moon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+  </svg>
+</button>
+
+<script>
+  function applyIcons() {
+    const isLight = document.documentElement.classList.contains("light");
+    document.getElementById("icon-sun")?.classList.toggle("hidden", !isLight);
+    document.getElementById("icon-moon")?.classList.toggle("hidden", isLight);
+  }
+
+  applyIcons();
+
+  document.getElementById("theme-toggle")?.addEventListener("click", () => {
+    const html = document.documentElement;
+    const nextIsLight = !html.classList.contains("light");
+    html.classList.toggle("light", nextIsLight);
+    html.classList.toggle("dark", !nextIsLight);
+    try {
+      localStorage.setItem("nse-theme", nextIsLight ? "light" : "dark");
+    } catch {
+      /* ignore */
+    }
+    applyIcons();
+  });
+</script>

@@ -1,0 +1,108 @@
+---
+import ThemeToggle from "./ThemeToggle.astro";
+
+const PRESETS = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS"];
+---
+
+<header class="sticky top-0 z-30 border-b border-hair bg-void/90 backdrop-blur supports-[backdrop-filter]:bg-void/70 html.light:bg-void-light/90">
+  <div class="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+    <a href="/" class="flex items-center gap-2 pr-2">
+      <svg width="26" height="26" viewBox="0 0 32 32" class="shrink-0">
+        <rect width="32" height="32" rx="6" fill="#5B8CFF" fill-opacity="0.12"/>
+        <line x1="9" y1="5" x2="9" y2="27" stroke="#21D97A" stroke-width="1.5"/>
+        <rect x="6.5" y="11" width="5" height="10" rx="1" fill="#21D97A"/>
+        <line x1="23" y1="7" x2="23" y2="20" stroke="#FF5C72" stroke-width="1.5"/>
+        <rect x="20.5" y="9" width="5" height="7" rx="1" fill="#FF5C72"/>
+      </svg>
+      <span class="font-mono text-[15px] font-semibold tracking-tight text-ink">
+        NSE<span class="text-signal">/</span>PULSE
+      </span>
+    </a>
+
+    <form id="ticker-form" class="relative flex-1 min-w-[180px] max-w-sm" role="search">
+      <label for="ticker-search" class="sr-only">Search NSE ticker</label>
+      <input
+        id="ticker-search"
+        type="text"
+        inputmode="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Search ticker — e.g. RELIANCE"
+        class="w-full rounded-md border border-hair bg-panel px-3 py-2 font-mono text-sm text-ink placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-signal"
+      />
+      <button
+        type="submit"
+        aria-label="Load ticker"
+        class="absolute right-1.5 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded text-ink-muted hover:text-signal"
+      >
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+      </button>
+    </form>
+
+    <nav aria-label="Preset tickers" class="flex flex-wrap items-center gap-1.5">
+      {PRESETS.map((p, i) => (
+        <button
+          type="button"
+          class="preset-btn rounded-md border border-hair px-2.5 py-1.5 font-mono text-xs text-ink-muted transition-colors hover:text-ink hover:border-signal/50 aria-pressed:border-signal aria-pressed:text-signal aria-pressed:bg-signal/10"
+          data-ticker={p}
+          aria-pressed={i === 0 ? "true" : "false"}
+        >
+          {p.replace(".NS", "")}
+        </button>
+      ))}
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <span id="conn-dot" class="hidden h-2 w-2 rounded-full bg-bull sm:inline-block animate-pulse-dot" title="Live"></span>
+      <ThemeToggle />
+    </div>
+  </div>
+</header>
+
+<script>
+  const DEFAULT_TICKER = "RELIANCE.NS";
+
+  function normalize(raw: string): string {
+    const t = raw.trim().toUpperCase();
+    if (!t) return "";
+    return t.endsWith(".NS") ? t : `${t}.NS`;
+  }
+
+  function setActivePreset(ticker: string) {
+    document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.ticker === ticker));
+    });
+  }
+
+  function broadcast(ticker: string) {
+    setActivePreset(ticker);
+    window.dispatchEvent(new CustomEvent("nse:ticker-change", { detail: { ticker } }));
+  }
+
+  document.getElementById("ticker-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("ticker-search") as HTMLInputElement | null;
+    const ticker = normalize(input?.value ?? "");
+    if (!ticker) return;
+    if (input) input.value = ticker;
+    broadcast(ticker);
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ticker = btn.dataset.ticker;
+      if (!ticker) return;
+      const input = document.getElementById("ticker-search") as HTMLInputElement | null;
+      if (input) input.value = ticker;
+      broadcast(ticker);
+    });
+  });
+
+  // Kick off the initial load once every listener has registered.
+  window.addEventListener("DOMContentLoaded", () => {
+    broadcast(DEFAULT_TICKER);
+  });
+</script>
