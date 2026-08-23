@@ -1,0 +1,116 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro"
+import { Sidebar } from "@/components/react/Sidebar"
+import { TopBar } from "@/components/react/TopBar"
+import { ScreenerActions } from "@/components/react/ScreenerActions"
+import { MetricCard } from "@/components/react/MetricCard"
+import { IndexTile } from "@/components/react/IndexTile"
+import { ScreenerTable } from "@/components/react/ScreenerTable"
+import { SignalFeed } from "@/components/react/SignalFeed"
+import {
+  currentUser,
+  indexCards,
+  navItems,
+  screenerMetrics,
+  signalFeed,
+  stocks,
+  systemHealth,
+} from "@/lib/mock-data"
+import { formatDelta } from "@/lib/utils"
+
+const m = screenerMetrics
+
+const metrics = [
+  {
+    label: "NSE Universe",
+    value: m.nseUniverse.toLocaleString("en-IN"),
+    delta: formatDelta(m.universeDelta),
+    deltaLabel: "stocks loaded",
+    deltaTone: "bullish" as const,
+    icon: "database" as const,
+  },
+  {
+    label: "Buy Signals",
+    value: m.buySignals.toLocaleString("en-IN"),
+    delta: formatDelta(m.buyDelta),
+    deltaLabel: "vs prev session",
+    deltaTone: "bullish" as const,
+    icon: "trending-up" as const,
+  },
+  {
+    label: "Sell Signals",
+    value: m.sellSignals.toLocaleString("en-IN"),
+    delta: formatDelta(m.sellDelta),
+    deltaLabel: "vs prev session",
+    deltaTone: "bearish" as const,
+    icon: "trending-down" as const,
+  },
+  {
+    label: "Avg RSI",
+    value: m.avgRsi.toFixed(1),
+    delta: `+${m.avgRsiDelta.toFixed(1)}`,
+    deltaLabel: "across universe",
+    deltaTone: "bullish" as const,
+    icon: "activity" as const,
+  },
+]
+---
+
+<BaseLayout
+  title="Market Screener · AlphaVision Quant"
+  description="Real-time NSE equity screener powered by a local Parquet + DuckDB pipeline, pandas-ta indicators and ML signal models."
+>
+  <div class="flex min-h-screen">
+    <aside
+      class="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:block"
+    >
+      <Sidebar
+        items={navItems}
+        health={systemHealth}
+        user={currentUser}
+        client:load
+      />
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <TopBar client:load />
+
+      <main class="flex-1 px-6 py-8">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1
+              class="text-pretty text-3xl font-semibold tracking-tight sm:text-4xl"
+            >
+              Market Screener
+            </h1>
+            <p class="mt-2 text-sm text-muted-foreground">
+              {`Real-time NSE equity data · Parquet + DuckDB · Last sync: ${m.lastSync}`}
+            </p>
+          </div>
+          <ScreenerActions client:load />
+        </div>
+
+        <section class="mt-8" aria-label="Screener metrics">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {metrics.map((metric) => <MetricCard {...metric} />)}
+          </div>
+        </section>
+
+        <section class="mt-4" aria-label="Index performance">
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {indexCards.map((index) => <IndexTile index={index} />)}
+          </div>
+        </section>
+
+        <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <ScreenerTable
+            stocks={stocks}
+            universeSize={m.nseUniverse}
+            client:load
+          />
+          <SignalFeed items={signalFeed} />
+        </div>
+      </main>
+    </div>
+  </div>
+</BaseLayout>
