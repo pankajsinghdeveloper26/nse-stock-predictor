@@ -3,57 +3,20 @@ import BaseLayout from "@/layouts/BaseLayout.astro"
 import { Sidebar } from "@/components/react/Sidebar"
 import { TopBar } from "@/components/react/TopBar"
 import { ScreenerActions } from "@/components/react/ScreenerActions"
-import { MetricCard } from "@/components/react/MetricCard"
-import { IndexTile } from "@/components/react/IndexTile"
-import { ScreenerTable } from "@/components/react/ScreenerTable"
-import { SignalFeed } from "@/components/react/SignalFeed"
+import { Dashboard } from "@/components/react/Dashboard"
 import {
   currentUser,
-  indexCards,
   navItems,
   screenerMetrics,
   signalFeed,
   stocks,
   systemHealth,
 } from "@/lib/mock-data"
-import { formatDelta } from "@/lib/utils"
 
+// Mock data is only used as the pre-hydration fallback shown for an
+// instant before Dashboard.tsx mounts and fetches live data from the
+// FastAPI backend (GET /api/market-mood, /api/stock/{ticker}).
 const m = screenerMetrics
-
-const metrics = [
-  {
-    label: "NSE Universe",
-    value: m.nseUniverse.toLocaleString("en-IN"),
-    delta: formatDelta(m.universeDelta),
-    deltaLabel: "stocks loaded",
-    deltaTone: "bullish" as const,
-    icon: "database" as const,
-  },
-  {
-    label: "Buy Signals",
-    value: m.buySignals.toLocaleString("en-IN"),
-    delta: formatDelta(m.buyDelta),
-    deltaLabel: "vs prev session",
-    deltaTone: "bullish" as const,
-    icon: "trending-up" as const,
-  },
-  {
-    label: "Sell Signals",
-    value: m.sellSignals.toLocaleString("en-IN"),
-    delta: formatDelta(m.sellDelta),
-    deltaLabel: "vs prev session",
-    deltaTone: "bearish" as const,
-    icon: "trending-down" as const,
-  },
-  {
-    label: "Avg RSI",
-    value: m.avgRsi.toFixed(1),
-    delta: `+${m.avgRsiDelta.toFixed(1)}`,
-    deltaLabel: "across universe",
-    deltaTone: "bullish" as const,
-    icon: "activity" as const,
-  },
-]
 ---
 
 <BaseLayout
@@ -90,26 +53,12 @@ const metrics = [
           <ScreenerActions client:load />
         </div>
 
-        <section class="mt-8" aria-label="Screener metrics">
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((metric) => <MetricCard {...metric} />)}
-          </div>
-        </section>
-
-        <section class="mt-4" aria-label="Index performance">
-          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {indexCards.map((index) => <IndexTile index={index} />)}
-          </div>
-        </section>
-
-        <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <ScreenerTable
-            stocks={stocks}
-            universeSize={m.nseUniverse}
-            client:load
-          />
-          <SignalFeed items={signalFeed} />
-        </div>
+        <Dashboard
+          initialMetrics={m}
+          initialStocks={stocks}
+          initialSignalFeed={signalFeed}
+          client:load
+        />
       </main>
     </div>
   </div>
