@@ -1,0 +1,65 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro"
+import { Sidebar } from "@/components/react/Sidebar"
+import { TopBar } from "@/components/react/TopBar"
+import { ScreenerActions } from "@/components/react/ScreenerActions"
+import { Dashboard } from "@/components/react/Dashboard"
+import {
+  currentUser,
+  navItems,
+  screenerMetrics,
+  signalFeed,
+  stocks,
+  systemHealth,
+} from "@/lib/mock-data"
+
+// Mock data is only used as the pre-hydration fallback shown for an
+// instant before Dashboard.tsx mounts and fetches live data from the
+// FastAPI backend (GET /api/market-mood, /api/stock/{ticker}).
+const m = screenerMetrics
+---
+
+<BaseLayout
+  title="Market Screener · AlphaVision Quant"
+  description="Real-time NSE equity screener powered by a local Parquet + DuckDB pipeline, pandas-ta indicators and ML signal models."
+>
+  <div class="flex min-h-screen">
+    <aside
+      class="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:block"
+    >
+      <Sidebar
+        items={navItems}
+        health={systemHealth}
+        user={currentUser}
+        client:load
+      />
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <TopBar client:load />
+
+      <main class="flex-1 px-6 py-8">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1
+              class="text-pretty text-3xl font-semibold tracking-tight sm:text-4xl"
+            >
+              Market Screener
+            </h1>
+            <p class="mt-2 text-sm text-muted-foreground">
+              {`Real-time NSE equity data · Parquet + DuckDB · Last sync: ${m.lastSync}`}
+            </p>
+          </div>
+          <ScreenerActions client:load />
+        </div>
+
+        <Dashboard
+          initialMetrics={m}
+          initialStocks={stocks}
+          initialSignalFeed={signalFeed}
+          client:load
+        />
+      </main>
+    </div>
+  </div>
+</BaseLayout>

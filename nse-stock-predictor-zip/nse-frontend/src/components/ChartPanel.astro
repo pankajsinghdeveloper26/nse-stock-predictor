@@ -1,0 +1,226 @@
+---
+---
+<section class="panel flex flex-col overflow-hidden">
+  <div class="flex flex-wrap items-center justify-between gap-2 border-b border-hair px-4 py-3">
+    <div>
+      <p class="label-eyebrow">Instrument</p>
+      <div class="flex items-baseline gap-2">
+        <h1 id="chart-ticker" class="font-mono text-lg font-semibold text-ink">—</h1>
+        <span id="chart-price" class="tabular text-base text-ink">—</span>
+        <span id="chart-change" class="tabular text-sm">—</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5 font-mono text-[11px] text-ink-muted">
+      <span class="inline-block h-2 w-2 rounded-sm bg-bull"></span> Candles
+      <span class="mx-1.5 h-3 w-px bg-hair"></span>
+      <span class="inline-block h-0.5 w-3 rounded-full bg-signal"></span> 5-day forecast
+    </div>
+  </div>
+
+  <div id="chart-status" class="hidden px-4 py-10 text-center font-mono text-sm text-ink-muted"></div>
+  <div id="chart-container" class="h-[420px] w-full sm:h-[480px]"></div>
+
+  <div class="grid grid-cols-2 gap-px border-t border-hair bg-hair sm:grid-cols-4">
+    <div class="bg-panel px-4 py-2.5">
+      <p class="label-eyebrow">RSI 14</p>
+      <p id="stat-rsi" class="tabular text-sm text-ink">—</p>
+    </div>
+    <div class="bg-panel px-4 py-2.5">
+      <p class="label-eyebrow">MACD</p>
+      <p id="stat-macd" class="tabular text-sm text-ink">—</p>
+    </div>
+    <div class="bg-panel px-4 py-2.5">
+      <p class="label-eyebrow">SMA 20 / 50</p>
+      <p id="stat-sma" class="tabular text-sm text-ink">—</p>
+    </div>
+    <div class="bg-panel px-4 py-2.5">
+      <p class="label-eyebrow">ATR 14</p>
+      <p id="stat-atr" class="tabular text-sm text-ink">—</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { createChart, ColorType, type IChartApi, type ISeriesApi } from "lightweight-charts";
+  import { getStock, getForecast, ApiError, type StockHistoryRow } from "../lib/api";
+
+  const container = document.getElementById("chart-container") as HTMLDivElement;
+  const statusEl = document.getElementById("chart-status") as HTMLDivElement;
+  const tickerEl = document.getElementById("chart-ticker")!;
+  const priceEl = document.getElementById("chart-price")!;
+  const changeEl = document.getElementById("chart-change")!;
+  const rsiEl = document.getElementById("stat-rsi")!;
+  const macdEl = document.getElementById("stat-macd")!;
+  const smaEl = document.getElementById("stat-sma")!;
+  const atrEl = document.getElementById("stat-atr")!;
+
+  let chart: IChartApi | null = null;
+  let candleSeries: ISeriesApi<"Candlestick"> | null = null;
+  let forecastSeries: ISeriesApi<"Line"> | null = null;
+  let requestToken = 0;
+
+  function isLight() {
+    return document.documentElement.classList.contains("light");
+  }
+
+  function themeColors() {
+    return isLight()
+      ? { bg: "#FFFFFF", text: "#1A1D23", grid: "#EAE6D8", border: "#DDD8C8" }
+      : { bg: "#11151C", text: "#E7EAF0", grid: "#1B2028", border: "#232935" };
+  }
+
+  function buildChart() {
+    const c = themeColors();
+    chart = createChart(container, {
+      layout: {
+        background: { type: ColorType.Solid, color: c.bg },
+        textColor: c.text,
+        fontFamily: "'IBM Plex Mono', monospace",
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: c.grid },
+        horzLines: { color: c.grid },
+      },
+      rightPriceScale: { borderColor: c.border },
+      timeScale: { borderColor: c.border, timeVisible: false },
+      crosshair: { mode: 0 },
+      autoSize: true,
+    });
+
+    candleSeries = chart.addCandlestickSeries({
+      upColor: "#21D97A",
+      downColor: "#FF5C72",
+      borderVisible: false,
+      wickUpColor: "#21D97A",
+      wickDownColor: "#FF5C72",
+    });
+
+    forecastSeries = chart.addLineSeries({
+      color: "#5B8CFF",
+      lineWidth: 2,
+      lineStyle: 2, // dashed
+      pointMarkersVisible: true,
+      lastValueVisible: true,
+      priceLineVisible: false,
+    });
+  }
+
+  function repaintTheme() {
+    if (!chart) return;
+    const c = themeColors();
+    chart.applyOptions({
+      layout: { background: { type: ColorType.Solid, color: c.bg }, textColor: c.text },
+      grid: { vertLines: { color: c.grid }, horzLines: { color: c.grid } },
+      rightPriceScale: { borderColor: c.border },
+      timeScale: { borderColor: c.border },
+    });
+  }
+
+  function setStatus(message: string | null) {
+    if (!statusEl) return;
+    if (message) {
+      statusEl.textContent = message;
+      statusEl.classList.remove("hidden");
+      container.classList.add("hidden");
+    } else {
+      statusEl.classList.add("hidden");
+      container.classList.remove("hidden");
+    }
+  }
+
+  function fmt(n: number | null | undefined, digits = 2): string {
+    return n === null || n === undefined || Number.isNaN(n) ? "—" : n.toFixed(digits);
+  }
+
+  async function loadTicker(ticker: string) {
+    const token = ++requestToken;
+    tickerEl.textContent = ticker.replace(".NS", "");
+    setStatus("Loading chart…");
+
+    try {
+      const [stock, forecast] = await Promise.all([
+        getStock(ticker, { period: "1y", interval: "1d" }),
+        getForecast(ticker, { period: "2y", interval: "1d", horizon: 5, test_size: 30 }).catch((err) => {
+          // Forecast can legitimately fail (insufficient history) without
+          // blocking the base candlestick chart.
+          console.warn("Forecast unavailable:", err);
+          return null;
+        }),
+      ]);
+
+      if (token !== requestToken) return; // a newer request superseded this one
+
+      if (!chart) buildChart();
+
+      const candles = stock.history
+        .filter((r: StockHistoryRow) => r.Open != null && r.High != null && r.Low != null && r.Close != null)
+        .map((r: StockHistoryRow) => ({
+          time: r.Date,
+          open: Number(r.Open),
+          high: Number(r.High),
+          low: Number(r.Low),
+          close: Number(r.Close),
+        }));
+
+      candleSeries?.setData(candles);
+
+      if (forecast && forecast.forecast.length && candles.length) {
+        const lastCandle = candles[candles.length - 1];
+        const overlay = [
+          { time: lastCandle.time, value: lastCandle.close },
+          ...forecast.forecast
+            .filter((f) => f.Predicted_Close != null)
+            .map((f) => ({ time: String(f.Date).slice(0, 10), value: Number(f.Predicted_Close) })),
+        ];
+        const signalColor = forecast.signal === "BUY" ? "#21D97A" : forecast.signal === "SELL" ? "#FF5C72" : "#F5B942";
+        forecastSeries?.applyOptions({ color: signalColor });
+        forecastSeries?.setData(overlay);
+      } else {
+        forecastSeries?.setData([]);
+      }
+
+      chart?.timeScale().fitContent();
+
+      // Header stats
+      const latest = stock.latest;
+      priceEl.textContent = fmt(latest.close);
+      const prevClose = candles.length > 1 ? candles[candles.length - 2].close : null;
+      if (prevClose && latest.close != null) {
+        const pct = ((latest.close - prevClose) / prevClose) * 100;
+        changeEl.textContent = `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+        changeEl.className = `tabular text-sm ${pct >= 0 ? "text-bull" : "text-bear"}`;
+      } else {
+        changeEl.textContent = "—";
+      }
+      rsiEl.textContent = fmt(latest.rsi_14, 1);
+      macdEl.textContent = `${fmt(latest.macd)} / ${fmt(latest.macd_signal)}`;
+      smaEl.textContent = `${fmt(latest.sma_20)} / ${fmt(latest.sma_50)}`;
+      atrEl.textContent = fmt(latest.atr_14);
+
+      setStatus(null);
+
+      window.dispatchEvent(new CustomEvent("nse:forecast-loaded", { detail: { ticker, forecast } }));
+    } catch (err) {
+      if (token !== requestToken) return;
+      const message =
+        err instanceof ApiError
+          ? err.status === 404
+            ? `Ticker "${ticker}" not found.`
+            : err.detail
+          : "Couldn't reach the backend — check that the API server is running.";
+      setStatus(message);
+      window.dispatchEvent(new CustomEvent("nse:forecast-loaded", { detail: { ticker, forecast: null } }));
+    }
+  }
+
+  window.addEventListener("nse:ticker-change", (e: Event) => {
+    const { ticker } = (e as CustomEvent<{ ticker: string }>).detail;
+    loadTicker(ticker);
+  });
+
+  window.addEventListener("resize", () => chart?.timeScale().fitContent());
+
+  const observer = new MutationObserver(repaintTheme);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+</script>

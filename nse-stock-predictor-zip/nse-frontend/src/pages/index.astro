@@ -1,0 +1,22 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import TickerMarquee from "../components/TickerMarquee.astro";
+import ChartPanel from "../components/ChartPanel.astro";
+import Sidebar from "../components/Sidebar.astro";
+import AboutModal from "../components/AboutModal.astro";
+---
+
+<Layout>
+  <Header />
+  <TickerMarquee />
+
+  <main class="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+      <ChartPanel />
+      <Sidebar />
+    </div>
+  </main>
+
+  <AboutModal />
+</Layout>
