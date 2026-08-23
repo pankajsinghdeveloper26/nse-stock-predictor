@@ -1,0 +1,61 @@
+---
+---
+<div class="overflow-hidden border-b border-hair bg-panel/60">
+  <div id="marquee-track" class="flex w-max items-center gap-8 whitespace-nowrap py-2 pl-4 font-mono text-xs">
+    <span class="text-ink-muted">Loading market tape…</span>
+  </div>
+</div>
+
+<script>
+  import { getMarketMood, type MarketMoodTickerRow } from "../lib/api";
+
+  const track = document.getElementById("marquee-track");
+
+  function moodColor(mood: string): string {
+    if (mood === "Bullish") return "text-bull";
+    if (mood === "Bearish") return "text-bear";
+    return "text-hold";
+  }
+
+  function arrow(pct: number | null): string {
+    if (pct === null || pct === undefined) return "";
+    return pct >= 0 ? "▲" : "▼";
+  }
+
+  function pill(row: MarketMoodTickerRow): string {
+    const pct = row.forecast_pct_change;
+    const pctText = pct === null || pct === undefined ? "—" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+    const color = moodColor(row.mood);
+    return `
+      <span class="inline-flex items-center gap-1.5">
+        <span class="text-ink-muted">${row.ticker.replace(".NS", "")}</span>
+        <span class="tabular text-ink">${row.last_close !== null ? row.last_close.toFixed(2) : "—"}</span>
+        <span class="tabular ${color}">${arrow(pct)} ${pctText}</span>
+      </span>
+    `;
+  }
+
+  async function render() {
+    if (!track) return;
+    try {
+      const data = await getMarketMood();
+      const items = data.tickers.map(pill).join(
+        '<span class="text-hair">/</span>'
+      );
+      // Duplicate the sequence back-to-back so the CSS marquee loop (-50%)
+      // is seamless regardless of content width.
+      track.innerHTML = `
+        <div class="flex items-center gap-8 animate-marquee">
+          <div class="flex items-center gap-8">${items}</div>
+          <div class="flex items-center gap-8" aria-hidden="true">${items}</div>
+        </div>
+      `;
+    } catch {
+      track.innerHTML = '<span class="text-ink-muted">Market tape unavailable — check the backend connection.</span>';
+    }
+  }
+
+  render();
+  // Refresh periodically; backend already caches per-ticker for 15 min.
+  setInterval(render, 5 * 60 * 1000);
+</script>

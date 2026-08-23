@@ -1,0 +1,22 @@
+# Astro / Node
+node_modules/
+dist/
+.astro/
+.env
+.env.production
+npm-debug.log*
+
+# Python (backend, if colocated)
+.venv/
+__pycache__/
+*.pyc
+
+# Persistent data (Parquet store, DuckDB file, file-based cache) —
+# generated at runtime by storage.py / cache.py, not source-controlled.
+data/parquet/
+data/cache/
+data/*.duckdb
+
+# OS
+.DS_Store
+Thumbs.db

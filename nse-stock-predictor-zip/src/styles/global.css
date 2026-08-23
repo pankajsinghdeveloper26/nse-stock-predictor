@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
+    monospace;
+
+  --color-background: oklch(0.98 0.003 265);
+  --color-foreground: oklch(0.21 0.02 265);
+
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.21 0.02 265);
+
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.21 0.02 265);
+
+  --color-primary: oklch(0.53 0.24 292);
+  --color-primary-foreground: oklch(0.99 0 0);
+
+  --color-secondary: oklch(0.96 0.01 285);
+  --color-secondary-foreground: oklch(0.35 0.05 285);
+
+  --color-muted: oklch(0.97 0.004 265);
+  --color-muted-foreground: oklch(0.58 0.015 265);
+
+  --color-accent: oklch(0.95 0.03 292);
+  --color-accent-foreground: oklch(0.42 0.19 292);
+
+  --color-border: oklch(0.93 0.006 265);
+  --color-input: oklch(0.93 0.006 265);
+  --color-ring: oklch(0.53 0.24 292);
+
+  --color-bullish: oklch(0.62 0.15 158);
+  --color-bullish-foreground: oklch(0.99 0 0);
+  --color-bullish-muted: oklch(0.95 0.04 158);
+
+  --color-bearish: oklch(0.6 0.2 22);
+  --color-bearish-foreground: oklch(0.99 0 0);
+  --color-bearish-muted: oklch(0.96 0.03 22);
+
+  --color-neutral-signal: oklch(0.95 0.02 265);
+  --color-neutral-signal-foreground: oklch(0.5 0.05 265);
+
+  --radius: 0.875rem;
+  --radius-sm: calc(var(--radius) - 0.5rem);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.5rem);
+  --radius-2xl: calc(var(--radius) + 1rem);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Tabular figures everywhere numbers matter in a trading UI. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+@layer utilities {
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0.05);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.animate-bar-rise {
+  transform-origin: bottom;
+  animation: bar-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-slide-in {
+  animation: fade-slide-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

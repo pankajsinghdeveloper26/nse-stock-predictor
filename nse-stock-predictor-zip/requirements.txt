@@ -1,0 +1,36 @@
+# --------------------------------------------------------------------------- #
+# NSE Stock Prediction Project — requirements.txt
+# --------------------------------------------------------------------------- #
+# Core data / modeling stack (Phase 1 & 2)
+# --------------------------------------------------------------------------- #
+pandas>=2.0.0
+numpy>=1.24.0
+yfinance>=0.2.40
+scikit-learn>=1.3.0
+
+# --------------------------------------------------------------------------- #
+# Phase 3 — FastAPI backend
+# --------------------------------------------------------------------------- #
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.6.0
+
+# --------------------------------------------------------------------------- #
+# Phase 4 — Persistent storage, caching, feature engineering, auth
+# (config.py / storage.py / cache.py / cleaner.py / loader.py / features.py /
+#  auth.py). All free/open-source, no paid services or API keys required.
+# --------------------------------------------------------------------------- #
+pyarrow>=15.0.0          # Parquet read/write (pandas.to_parquet/read_parquet backend)
+duckdb>=0.10.0           # analytical SQL over the Parquet store (storage.query_history_sql)
+diskcache>=5.6.0         # file-based cache; loader.py/cache.py degrade gracefully if absent
+pandas-ta>=0.3.14b0      # RSI/MACD/Bollinger/Supertrend/EMA/SMA/ATR/VWAP (features.py)
+python-dotenv>=1.0.0     # optional .env loading in config.py
+
+# --------------------------------------------------------------------------- #
+# Optional — models.py degrades gracefully if these aren't installed:
+#   - no xgboost   -> Tree Ensemble falls back to sklearn RandomForestRegressor
+#   - no tensorflow -> LSTM falls back to sklearn MLPRegressor on windowed features
+# Uncomment to enable the stronger backends.
+# --------------------------------------------------------------------------- #
+# xgboost>=2.0.0
+# tensorflow>=2.15.0
