@@ -11,11 +11,18 @@ export function ScreenerActions() {
     window.setTimeout(() => setter(false), 1200)
   }
 
+  function refresh() {
+    setRefreshing(true)
+    // Dashboard.tsx listens for this and re-fetches from the live backend.
+    window.dispatchEvent(new CustomEvent("screener:refresh"))
+    window.setTimeout(() => setRefreshing(false), 1200)
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
         type="button"
-        onClick={() => simulate(setRefreshing)}
+        onClick={refresh}
         disabled={refreshing}
         className="flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-70"
       >
