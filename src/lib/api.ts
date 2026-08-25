@@ -33,22 +33,34 @@ async function request<T>(path: string, params?: Record<string, string | number 
     }
   }
 
-  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  if (!res.ok) {
-    let code = "unknown_error";
-    let detail = `Request failed with status ${res.status}`;
-    try {
-      const body = await res.json();
-      code = body.error ?? code;
-      detail = body.detail ?? detail;
-    } catch {
-      /* response wasn't JSON — keep defaults */
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      let code = "unknown_error";
+      let detail = `Request failed with status ${res.status}`;
+      try {
+        const body = await res.json();
+        code = body.error ?? code;
+        detail = body.detail ?? detail;
+      } catch {
+        /* response wasn't JSON — keep defaults */
+      }
+      throw new ApiError(res.status, code, detail);
     }
-    throw new ApiError(res.status, code, detail);
-  }
 
-  return res.json() as Promise<T>;
+    return res.json() as Promise<T>;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +128,7 @@ export interface ForecastPayload {
   forecast: ForecastRow[];
   market_mood: MarketMood;
   signal: Signal;
-  rationale: string;
+  rationale: string[];
   disclaimer: string;
 }
 

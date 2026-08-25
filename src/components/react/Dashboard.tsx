@@ -48,14 +48,21 @@ export function Dashboard({
   const [error, setError] = useState<string | null>(null)
   const [backendUp, setBackendUp] = useState<boolean | null>(null)
 
+  const loadGenerationRef = useState({ current: 0 })[0]
+
   const load = useCallback(async () => {
+    const currentGeneration = ++loadGenerationRef.current
+    const isLatest = () => currentGeneration === loadGenerationRef.current
+
     setStatus("loading")
     setError(null)
 
     try {
       await getHealth()
+      if (!isLatest()) return
       setBackendUp(true)
     } catch {
+      if (!isLatest()) return
       setBackendUp(false)
     }
 
@@ -66,6 +73,8 @@ export function Dashboard({
         getMarketMood({ tickers }),
         Promise.allSettled(tickers.map((t) => getStock(t, { period: "3mo" }))),
       ])
+
+      if (!isLatest()) return
 
       const moodByTicker = new Map(mood.tickers.map((row) => [row.ticker.replace(/\.NS$/, ""), row]))
 
@@ -107,6 +116,8 @@ export function Dashboard({
         })
       })
 
+      if (!isLatest()) return
+
       if (nextStocks.length > 0) {
         setStocks(nextStocks)
       }
@@ -120,6 +131,11 @@ export function Dashboard({
         nseUniverse: mood.basket_size,
         buySignals: buy,
         sellSignals: sell,
+        // Clear stale buyDelta and sellDelta — backend doesn't return historical
+        // signal counts yet, so showing initialMetrics deltas alongside live
+        // signal counts would be misleading.
+        buyDelta: 0,
+        sellDelta: 0,
         avgRsi: rsiCount > 0 ? rsiSum / rsiCount : prev.avgRsi,
         lastSync: new Date(mood.as_of.replace(" UTC", "Z").replace(" ", "T")).toLocaleTimeString(
           "en-IN",
@@ -146,14 +162,24 @@ export function Dashboard({
 
       if (feed.length > 0) setSignalFeed(feed)
 
-      if (mood.failures.length > 0 && nextStocks.length === 0) {
-        setError(
-          `Backend reached, but every ticker in the basket failed (e.g. ${mood.failures[0].ticker}: ${mood.failures[0].error}). Showing last known data.`,
-        )
+      // Warn if every stock request failed — check both nextStocks (which only
+      // includes fulfilled results) and whether any fallback rows remain visible.
+      if (nextStocks.length === 0 && stockResults.length > 0) {
+        if (mood.failures.length > 0) {
+          setError(
+            `Backend reached, but every ticker in the basket failed (e.g. ${mood.failures[0].ticker}: ${mood.failures[0].error}). Showing last known data.`,
+          )
+        } else {
+          setError(
+            `Backend reached, but no stock data was returned. All requests failed or returned empty results. Showing last known data.`,
+          )
+        }
       }
 
       setStatus("ready")
+      window.dispatchEvent(new CustomEvent("screener:refresh-complete"))
     } catch (err) {
+      if (!isLatest()) return
       const message =
         err instanceof ApiError
           ? `${err.code}: ${err.detail}`
@@ -164,6 +190,7 @@ export function Dashboard({
         `Couldn't reach the backend at /api (${message}). Is the FastAPI server running? See README: uvicorn server:app --reload.`,
       )
       setStatus("error")
+      window.dispatchEvent(new CustomEvent("screener:refresh-complete"))
     }
   }, [])
 

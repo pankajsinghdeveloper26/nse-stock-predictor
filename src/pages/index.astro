@@ -3,6 +3,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro"
 import { Sidebar } from "@/components/react/Sidebar"
 import { TopBar } from "@/components/react/TopBar"
 import { ScreenerActions } from "@/components/react/ScreenerActions"
+import { ScreenerHeader } from "@/components/react/ScreenerHeader"
 import { Dashboard } from "@/components/react/Dashboard"
 import {
   currentUser,
@@ -46,9 +47,7 @@ const m = screenerMetrics
             >
               Market Screener
             </h1>
-            <p class="mt-2 text-sm text-muted-foreground">
-              {`Real-time NSE equity data · Parquet + DuckDB · Last sync: ${m.lastSync}`}
-            </p>
+            <ScreenerHeader initialLastSync={m.lastSync} client:load />
           </div>
           <ScreenerActions client:load />
         </div>

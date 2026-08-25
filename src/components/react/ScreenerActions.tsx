@@ -1,10 +1,20 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Play, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function ScreenerActions() {
   const [refreshing, setRefreshing] = useState(false)
   const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    function onRefreshComplete() {
+      setRefreshing(false)
+    }
+    window.addEventListener("screener:refresh-complete", onRefreshComplete)
+    return () => {
+      window.removeEventListener("screener:refresh-complete", onRefreshComplete)
+    }
+  }, [])
 
   function simulate(setter: (v: boolean) => void) {
     setter(true)
@@ -15,7 +25,6 @@ export function ScreenerActions() {
     setRefreshing(true)
     // Dashboard.tsx listens for this and re-fetches from the live backend.
     window.dispatchEvent(new CustomEvent("screener:refresh"))
-    window.setTimeout(() => setRefreshing(false), 1200)
   }
 
   return (
